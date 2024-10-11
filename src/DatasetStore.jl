@@ -47,6 +47,7 @@ function Base.append!(store::DatasetStore, index::OrderedDict{String, String})
     
     return index_id
 end
+
 """
     get_index(store::DatasetStore, index_id::String)
 
@@ -105,7 +106,12 @@ Load a DatasetStore object from a JLD2 file.
 - `DatasetStore`: The loaded DatasetStore object.
 """
 function load_dataset_store(filename::String)
-    data = load(filename)
+    data = load(filename, typemap=Dict(
+        "EasyRAGBench.AbstractChunkFormat" => EasyRAGStore.AbstractChunkFormat,
+        "EasyRAGBench.RefChunk" => EasyRAGStore.RefChunk,
+        "EasyRAGBench.CompressionStrategy" => EasyRAGStore.CompressionStrategy,
+        "EasyRAGBench.RefChunkCompression" => EasyRAGStore.RefChunkCompression
+    ))
     return DatasetStore(
         indexes = data["indexes"],
         compression = data["compression"],

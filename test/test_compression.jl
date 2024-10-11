@@ -1,6 +1,6 @@
 using Test
-using EasyRAGBench: RefChunkCompression, NoCompression, AbstractChunkFormat
-using EasyRAGBench
+using EasyRAGStore: RefChunkCompression, NoCompression, AbstractChunkFormat
+using EasyRAGStore
 using OrderedCollections
 
 # Helper function to calculate the size of an index
@@ -9,8 +9,8 @@ function calculate_index_size(index::OrderedDict{String, Union{String, T}}) wher
 end
 
 # Helper function to count RefChunks
-function count_refchunks(index::OrderedDict{String, Union{String, EasyRAGBench.RefChunk}})
-    return count(chunk -> chunk isa EasyRAGBench.RefChunk, values(index))
+function count_refchunks(index::OrderedDict{String, Union{String, EasyRAGStore.RefChunk}})
+    return count(chunk -> chunk isa EasyRAGStore.RefChunk, values(index))
 end
 
 # Helper function to count references to each chunk
@@ -18,7 +18,7 @@ function count_references(all_indexes)
     ref_count = Dict{String, Int}()
     for (_, index) in all_indexes
         for (_, chunk) in index
-            if chunk isa EasyRAGBench.RefChunk
+            if chunk isa EasyRAGStore.RefChunk
                 ref_key = "$(chunk.collection_id):$(chunk.source)"
                 ref_count[ref_key] = get(ref_count, ref_key, 0) + 1
             end
@@ -33,11 +33,11 @@ end
         index = OrderedDict("source1" => "content1", "source2" => "content2")
         
         # Test compression (which should be identity for NoCompression)
-        compressed = EasyRAGBench.compress(compression, Dict(), index)
+        compressed = EasyRAGStore.compress(compression, Dict(), index)
         @test compressed == index
         
         # Test decompression (which should be identity for NoCompression)
-        decompressed = EasyRAGBench.decompress(compression, compressed, Dict{String,OrderedDict{String,String}}())
+        decompressed = EasyRAGStore.decompress(compression, compressed, Dict{String,OrderedDict{String,String}}())
         @test decompressed == index
         
         # Check sizes (should be the same for NoCompression)
@@ -48,25 +48,25 @@ end
         compression = RefChunkCompression()
         
         # Create some test data
-        chunk1 = EasyRAGBench.generate_large_content(10, seed=1)  # 10 KB of content
-        chunk2 = EasyRAGBench.generate_large_content(10, seed=2)  # Another 10 KB of content
+        chunk1 = EasyRAGStore.generate_large_content(10, seed=1)  # 10 KB of content
+        chunk2 = EasyRAGStore.generate_large_content(10, seed=2)  # Another 10 KB of content
         
         index1 = OrderedDict("source1" => chunk1, "source2" => chunk2)
         index2 = OrderedDict("source3" => chunk1, "source4" => chunk2)
-        index3 = OrderedDict("source5" => EasyRAGBench.generate_large_content(10, seed=3))  # Unique content
+        index3 = OrderedDict("source5" => EasyRAGStore.generate_large_content(10, seed=3))  # Unique content
         
         # Compress the indexes
-        compressed1 = EasyRAGBench.compress(compression, Dict(), index1)
+        compressed1 = EasyRAGStore.compress(compression, Dict(), index1)
         all_indexes = Dict("index1" => compressed1)
-        compressed2 = EasyRAGBench.compress(compression, all_indexes, index2)
+        compressed2 = EasyRAGStore.compress(compression, all_indexes, index2)
         all_indexes["index2"] = compressed2
-        compressed3 = EasyRAGBench.compress(compression, all_indexes, index3)
+        compressed3 = EasyRAGStore.compress(compression, all_indexes, index3)
         all_indexes["index3"] = compressed3
         
         # Test decompression
-        decompressed1 = EasyRAGBench.decompress(compression, compressed1, all_indexes)
-        decompressed2 = EasyRAGBench.decompress(compression, compressed2, all_indexes)
-        decompressed3 = EasyRAGBench.decompress(compression, compressed3, all_indexes)
+        decompressed1 = EasyRAGStore.decompress(compression, compressed1, all_indexes)
+        decompressed2 = EasyRAGStore.decompress(compression, compressed2, all_indexes)
+        decompressed3 = EasyRAGStore.decompress(compression, compressed3, all_indexes)
         
         @test decompressed1 == index1
         @test decompressed2 == index2
@@ -102,12 +102,12 @@ end
     
     @testset "fast_cache_key" begin
         index = OrderedDict("source1" => "content1", "source2" => "content2")
-        @time key = EasyRAGBench.fast_cache_key(index)
+        @time key = EasyRAGStore.fast_cache_key(index)
         @test typeof(key) == String
         @test length(key) == 16  # Should be a 16-digit hexadecimal string
         
         # Test with empty input
-        empty_key = EasyRAGBench.fast_cache_key(OrderedDict{String, String}())
+        empty_key = EasyRAGStore.fast_cache_key(OrderedDict{String, String}())
         @test empty_key == "0"
     end
 end

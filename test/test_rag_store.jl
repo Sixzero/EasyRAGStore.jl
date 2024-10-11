@@ -1,6 +1,6 @@
 using Test
-using EasyRAGBench: RAGStore, get_index, get_questions, append!, save_store, load_store
-using EasyRAGBench
+using EasyRAGStore: RAGStore, get_index, get_questions, append!, save_store, load_store
+using EasyRAGStore
 using OrderedCollections
 using Dates
 

@@ -1,7 +1,7 @@
 using Test
-using EasyRAGBench
+using EasyRAGStore
 
-@testset "EasyRAGBench Tests" begin
+@testset "EasyRAGStore Tests" begin
     include("test_compression.jl")
     include("test_rag_store.jl")
 end
