@@ -1,0 +1,11 @@
+name = "EasyRAGStore"
+uuid = "d16f9f6d-81ae-4245-9512-f7a8526a5ef4"
+authors = ["SixZero <havliktomi@hotmail.com>"]
+version = "0.1.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+PromptingTools = "670122d1-24a8-4d70-bfce-740807c42192"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
