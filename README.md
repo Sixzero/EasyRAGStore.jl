@@ -1,12 +1,12 @@
 # EasyRAGStore.jl
 
-EasyRAGStore.jl is a Julia package designed for efficient collection, compression, and storage of Retrieval-Augmented Generation (RAG) datasets. It specializes in managing large amounts of textual data with optimized storage utilization, making it ideal for RAG-based applications.
+EasyRAGStore.jl is a lightweight Julia package for efficient storage and retrieval of RAG (Retrieval-Augmented Generation) datasets. It specializes in managing large amounts of textual data with optimized storage utilization, making it ideal for RAG-based applications.
 
 ## Key Features
 
-- Efficient collection and storage of RAG datasets, including indices and associated questions
-- Advanced compression using RefChunkCompression, which stores repeated chunks as references
-- Seamless reading from and writing to JLD2 files for persistent storage
+- Efficient storage of indices (as `OrderedDict`s) and associated questions
+- `RefChunkCompression` for optimized storage, which stores repeated chunks as `Ref`s.
+- Reading/writing with JLD2 for persistent storage
 
 ## Core Functionality
 
