@@ -14,9 +14,10 @@ EasyRAGStore.jl is a Julia package designed to efficiently manage and store Retr
 
 EasyRAGStore.jl is currently only available as a development package. To install it, use the following commands in Julia:
 
+```julia
 using Pkg
 Pkg.develop(url="https://github.com/your-username/EasyRAGStore.jl.git")
-
+```
 
 Replace `your-username` with the actual GitHub username or organization where the package is hosted.
 
@@ -24,8 +25,7 @@ Replace `your-username` with the actual GitHub username or organization where th
 
 Here's a basic example of how to use EasyRAGStore.jl:
 
-```Processing diff with AI for higher quality...
-julia
+```julia
 using EasyRAGStore
 using OrderedCollections
 
