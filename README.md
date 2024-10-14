@@ -9,6 +9,7 @@ EasyRAGStore.jl is a Julia package designed to efficiently manage and store Retr
 - Separate storage for dataset indices and test cases
 - Easy-to-use API for appending, retrieving, and managing data
 - Integration with EasyRAGBench.jl for benchmarking and evaluation
+- Support for collecting and storing datasets
 
 ## Installation
 
@@ -59,6 +60,47 @@ println("Questions for index: ", questions)
 save_store(store)
 ```
 
+## Collecting and Storing Datasets
+
+EasyRAGStore.jl can be used to collect and store datasets for RAG applications. Here's an example of how to collect data from various sources and store it in a RAGStore:
+
+```julia
+using EasyRAGStore
+using OrderedCollections
+
+# Create a new RAGStore for your dataset
+store = RAGStore("my_collected_dataset")
+
+# Function to collect data from a source (replace with your actual data collection logic)
+function collect_data_from_source(source_id)
+    # Simulating data collection
+    content = "This is content collected from source $source_id"
+    return content
+end
+
+# Collect and store data from multiple sources
+for i in 1:100
+    source_id = "source_$i"
+    content = collect_data_from_source(source_id)
+    
+    # Create an index for this piece of content
+    index = OrderedDict(source_id => content)
+    
+    # Create a sample question (replace with actual question generation logic if available)
+    question = (
+        question = "What is the content of $source_id?",
+        answer = content
+    )
+    
+    # Append to the store
+    append!(store, index, question)
+end
+
+println("Dataset collection complete. Total indices: ", length(store.dataset_store.indexes))
+```
+
+This example demonstrates how to use EasyRAGStore.jl to collect and store a dataset from multiple sources. You can adapt this pattern to your specific data collection needs, whether you're scraping websites, reading from files, or accessing APIs.
+
 ## Compression
 
 EasyRAGStore.jl uses a sophisticated compression strategy called RefChunkCompression. This strategy identifies repeated chunks across different indices and stores them as references, significantly reducing the overall storage size.
@@ -77,8 +119,7 @@ store = RAGStore("my_rag_dataset")
 # Generate solutions for all indices in the store
 generate_all_solutions(store, "all_solutions.jld2")
 
-# Define benchmark configurations[ Info: Tokens: 821 @ Cost: $0.0002 in 7.6 seconds
-
+# Define benchmark configurations
 configs = [
     BenchmarkConfig(embedding_model="voyage-code-2", top_k=120, batch_size=50, reranker_model="gpt4om", top_n=10),
     BenchmarkConfig(embedding_model="voyage-code-2", top_k=40, batch_size=50, reranker_model="gpt4om", top_n=10),
