@@ -1,15 +1,20 @@
 # EasyRAGStore.jl
 
-EasyRAGStore.jl is a Julia package designed to efficiently manage and store Retrieval-Augmented Generation (RAG) datasets and associated test cases. It provides a robust framework for compressing, storing, and retrieving large amounts of textual data, making it ideal for RAG-based applications.
+EasyRAGStore.jl is a Julia package designed for efficient collection, compression, and storage of Retrieval-Augmented Generation (RAG) datasets. It specializes in managing large amounts of textual data with optimized storage utilization, making it ideal for RAG-based applications.
 
-## Features
+## Key Features
 
-- Efficient storage of multiple indices in a single file
-- Advanced compression techniques using RefChunkCompression
-- Separate storage for dataset indices and test cases
-- Easy-to-use API for appending, retrieving, and managing data
-- Integration with EasyRAGBench.jl for benchmarking and evaluation
-- Support for collecting and storing datasets
+- Efficient collection and storage of RAG datasets, including indices and associated questions
+- Advanced compression using RefChunkCompression, which stores repeated chunks as references
+- Seamless reading from and writing to JLD2 files for persistent storage
+
+## Core Functionality
+
+EasyRAGStore.jl primarily deals with:
+
+1. **Indices**: Represented as `OrderedDict`s, these are the searchable units in which we store content.
+2. **Questions**: Associated with specific indices, these represent queries or tasks performed on the indices.
+3. **RefChunks**: A compression mechanism that stores repeated content as references to previous occurrences, significantly reducing storage requirements.
 
 ## Installation
 
@@ -17,14 +22,12 @@ EasyRAGStore.jl is currently only available as a development package. To install
 
 ```julia
 using Pkg
-Pkg.develop(url="https://github.com/your-username/EasyRAGStore.jl.git")
+Pkg.develop(url="https://github.com/SixZero/EasyRAGStore.jl.git")
 ```
 
-Replace `your-username` with the actual GitHub username or organization where the package is hosted.
+## Basic Usage
 
-## Usage
-
-Here's a basic example of how to use EasyRAGStore.jl:
+Here's a simple example demonstrating the core functionality of EasyRAGStore.jl:
 
 ```julia
 using EasyRAGStore
@@ -33,7 +36,7 @@ using OrderedCollections
 # Create a new RAGStore
 store = RAGStore("my_rag_dataset")
 
-# Create a new index
+# Create a new index (OrderedDict)
 new_index = OrderedDict(
     "source1" => "This is the content of source 1.",
     "source2" => "This is the content of source 2."
@@ -56,9 +59,7 @@ println("Retrieved index: ", retrieved_index)
 questions = get_questions(store, index_id)
 println("Questions for index: ", questions)
 
-# Save the store (this is done automatically after appending, but can be called manually)
-save_store(store)
-```
+In this example, we create a new index and its associated question, append them to the store, and then retrieve them. Behind the scenes, EasyRAGStore.jl uses RefChunkCompression to efficiently store the data, creating references to previously stored chunks when possible.
 
 ## Collecting and Storing Datasets
 
