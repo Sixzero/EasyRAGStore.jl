@@ -41,8 +41,7 @@ end
 function log_index(logger::IndexLogger, index::AbstractChunkIndex, question::String)
     index_dict = OrderedDict(zip(index.sources, index.chunks))
     question_tuple = (question=question, timestamp=Dates.now())
-    index_id = append!(logger.store, index_dict, question_tuple)
-    return index_id
+    append!(logger.store, index_dict, question_tuple)
 end
 
 """

@@ -1,5 +1,5 @@
 using Test
-using EasyRAGStore: RAGStore, get_index, get_questions, append!, save_store, load_store
+using EasyRAGStore: RAGStore, get_index, get_questions, append!, save_store
 using EasyRAGStore
 using OrderedCollections
 using Dates
@@ -52,7 +52,7 @@ using Dates
         
         # Test saving and loading the store
         save_store(joinpath(test_cache_dir, "rag_store"), store)
-        loaded_store = load_store(joinpath(test_cache_dir, "rag_store"))
+        loaded_store = RAGStore(joinpath(test_cache_dir, "rag_store"))
         
         # Verify loaded store
         @test get_index(loaded_store, index_id1) == index1
@@ -98,7 +98,7 @@ using Dates
         
         # Test saving and loading the store
         save_store(joinpath(test_cache_dir, "rag_store"), store)
-        loaded_store = load_store(joinpath(test_cache_dir, "rag_store"))
+        loaded_store = RAGStore(joinpath(test_cache_dir, "rag_store"))
         
         # Verify loaded store
         @test get_index(loaded_store, index_id1) == index
@@ -128,6 +128,36 @@ using Dates
         @test get_index(new_store, index_id) == index
         @test get_questions(new_store, index_id) == [question]
 
+        # Clean up
+        rm(test_cache_dir, recursive=true)
+    end
+    
+    @testset "Concurrent operations" begin
+        test_cache_dir = create_test_dir()
+        mkdir(test_cache_dir)
+        store = RAGStore("test", test_cache_dir)
+        
+        # Test concurrent appends
+        n_tasks = 10
+        tasks = map(1:n_tasks) do i
+            @async begin
+                index = OrderedDict("source$i" => "content$i")
+                question = (question="Question $i", answer="Answer $i")
+                append!(store, index, question)
+            end
+        end
+        
+        # Wait for all tasks
+        index_ids = fetch.(tasks)
+        
+        # Verify all entries were saved
+        @test length(unique(index_ids)) == n_tasks
+        for i in 1:n_tasks
+            questions = get_questions(store, index_ids[i])
+            @test length(questions) == 1
+            @test questions[1].question == "Question $i"
+        end
+        
         # Clean up
         rm(test_cache_dir, recursive=true)
     end
