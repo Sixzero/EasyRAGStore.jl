@@ -140,7 +140,7 @@ using Dates
         # Test concurrent appends
         n_tasks = 10
         tasks = map(1:n_tasks) do i
-            @async begin
+            @async_showerr begin
                 index = OrderedDict("source$i" => "content$i")
                 question = (question="Question $i", answer="Answer $i")
                 append!(store, index, question)

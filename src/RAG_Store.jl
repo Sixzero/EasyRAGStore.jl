@@ -1,5 +1,6 @@
 using Base.Threads: ReentrantLock, @spawn
 using JLD2
+using BoilerplateCvikli: @async_showerr
 
 include("DatasetStore.jl")
 include("TestcaseStore.jl")
@@ -16,7 +17,7 @@ A struct to manage both DatasetStore and TestcaseStore.
 - `testcase_store::Union{Task, TestcaseStore}`: The TestcaseStore object for managing questions/test cases.
 - `lock::ReentrantLock`: Lock for thread safety.
 """
-struct RAGStore
+mutable struct RAGStore
     filename::String
     cache_dir::String
     dataset_store::Union{Task, DatasetStore}  
@@ -52,7 +53,7 @@ Append a new index and its associated question/test case to the store.
 - `String`: The ID of the newly added index.
 """
 function Base.append!(store::RAGStore, index::OrderedDict{String, String}, question::NamedTuple)
-    @async lock(store.lock) do
+    @async_showerr lock(store.lock) do
         ensure_loaded!(store)
         index_id = append!(store.dataset_store, index)
         append!(store.testcase_store, index_id, question)
