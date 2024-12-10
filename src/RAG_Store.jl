@@ -4,6 +4,7 @@ using BoilerplateCvikli: @async_showerr
 
 include("DatasetStore.jl")
 include("TestcaseStore.jl")
+include("FileUtils.jl")
 
 """
     RAGStore

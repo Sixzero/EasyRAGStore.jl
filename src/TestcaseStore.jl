@@ -60,13 +60,9 @@ end
     save_testcase_store(filename::String, store::TestcaseStore)
 
 Save a TestcaseStore object to a JLD2 file.
-
-# Arguments
-- `filename::String`: The name of the file to save the store to.
-- `store::TestcaseStore`: The TestcaseStore object to save.
 """
 function save_testcase_store(filename::String, store::TestcaseStore)
-    jldsave(filename; questions=store.questions)
+    safe_jldsave(filename; questions=store.questions)
 end
 
 

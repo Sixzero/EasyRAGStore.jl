@@ -78,7 +78,7 @@ Save a DatasetStore object to a JLD2 file.
 - `store::DatasetStore`: The DatasetStore object to save.
 """
 function save_dataset_store(filename::String, store::DatasetStore)
-    jldsave(filename; indexes=store.indexes, compression=store.compression)
+    safe_jldsave(filename; indexes=store.indexes, compression=store.compression)
 end
 
 """
@@ -91,7 +91,7 @@ Save the indexes of a DatasetStore object to a JLD2 file.
 - `store::DatasetStore`: The DatasetStore object containing the indexes to save.
 """
 function save_index_store(filename::String, store::DatasetStore)
-    jldsave(filename; indexes=store.indexes)
+    safe_jldsave(filename; indexes=store.indexes)
 end
 
 """
