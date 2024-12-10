@@ -56,8 +56,14 @@ function Base.append!(store::RAGStore, index::OrderedDict{String, String}, quest
     @async_showerr lock(store.lock) do
         ensure_loaded!(store)
         index_id = append!(store.dataset_store, index)
-        append!(store.testcase_store, index_id, question)
-        save_store(store)  # Save the store after appending
+        
+        # Check if the question already exists for this index_id
+        existing_questions = get_questions(store.testcase_store, index_id)
+        if !any(q -> q == question, existing_questions)
+            append!(store.testcase_store, index_id, question)
+            save_store(store)  # Save the store after appending
+        end
+        
         index_id
     end
 end

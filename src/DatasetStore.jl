@@ -16,12 +16,12 @@ using OrderedCollections
 A struct to store collections of indices and their compression strategy.
 
 # Fields
-- `indexes::Dict{String, OrderedDict{String, Union{String, AbstractChunkFormat}}}`: A dictionary of indices, where each index is an OrderedDict mapping sources to chunks.
+- `indexes::Dict{String, OrderedDict{String, Union{String, RefChunk}}}`: A dictionary of indices, where each index is an OrderedDict mapping sources to chunks.
 - `compression::CompressionStrategy`: The compression strategy used for storing chunks.
 - `cache_dir::String`: The directory where cache files are stored.
 """
-@kwdef struct DatasetStore
-    indexes::Dict{String, OrderedDict{String, Union{String, AbstractChunkFormat}}} = Dict()
+@kwdef struct DatasetStore{ChunkType <: AbstractChunkFormat}
+    indexes::Dict{String, OrderedDict{String, Union{String, ChunkType}}} = Dict{String, OrderedDict{String, Union{String, RefChunk}}}()
     compression::CompressionStrategy = RefChunkCompression()
     cache_dir::String = joinpath(dirname(@__DIR__), "benchmark_data")
 end

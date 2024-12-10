@@ -63,7 +63,7 @@ This function checks for existing chunks across all stored indices and creates R
 # Returns
 - `OrderedDict{String, Union{String, RefChunk}}`: The compressed index
 """
-function compress(::RefChunkCompression, indexes::Dict, new_index::OrderedDict{String, String})
+function compress(::RefChunkCompression, indexes::Dict{String, OrderedDict{String, Union{String, RefChunk}}}, new_index::OrderedDict{String, String})
     compressed_index = OrderedDict{String, Union{String, RefChunk}}()
     
     # Generate a cache key for the new index and check for existence!
