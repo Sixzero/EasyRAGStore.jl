@@ -131,7 +131,7 @@ Decompress an entire index using the store's compression method and all availabl
 # Returns
 - `OrderedDict{String, String}`: The decompressed index.
 """
-function decompress(index::OrderedDict{String, Union{String, AbstractChunkFormat}}, store::DatasetStore)
+function decompress(index::OrderedDict{String, Union{String, T}}, store::DatasetStore) where T <: AbstractChunkFormat
     decompress(store.compression, index, store.indexes)
 end
 
