@@ -6,42 +6,58 @@ using PromptingTools.Experimental.RAGTools: AbstractChunkIndex
 """
     IndexLogger(store_path::String)
 
-Create an IndexLogger instance with a specified store path.
+Create an IndexLogger to persistently store and track RAG index queries and their associated questions.
+
+The IndexLogger uses lazy initialization for the underlying RAGStore to optimize resource usage. The store is 
+only created or loaded when actually needed.
 
 # Arguments
 - `store_path::String`: The path where the RAGStore will be saved.
 
-# Returns
-- `IndexLogger`: An instance of IndexLogger.
+# Example
+```julia
+logger = IndexLogger("my_rag_logs")
+log_index(logger, index, "What is the best way to implement RAG?")
+```
 """
-struct IndexLogger
-    store::RAGStore
+mutable struct IndexLogger
+    store_path::String
+    _store::Union{Nothing, RAGStore}
+    
+    IndexLogger(store_path::String) = new(store_path, nothing)
 end
 
-function IndexLogger(store_path::String)
-    return IndexLogger(RAGStore(store_path))
+# Helper struct for JLD2 serialization to prevent redundant store serialization
+# This avoids saving the expensive cache data of the RAGStore when the IndexLogger is serialized,
+# as the store already handles its own persistence.
+struct IndexLogger_JLD2
+    store_path::String
 end
 
-"""
-    log_index(logger::IndexLogger, index::AbstractChunkIndex, question::String)
+JLD2.writeas(::Type{<:IndexLogger}) = IndexLogger_JLD2
+JLD2.readas(::Type{<:IndexLogger_JLD2}) = IndexLogger
 
-Log an index and its associated question to the IndexLogger's RAGStore.
+Base.convert(::Type{IndexLogger_JLD2}, x::IndexLogger) = IndexLogger_JLD2(x.store_path)
+Base.convert(::Type{IndexLogger}, x::IndexLogger_JLD2) = IndexLogger(x.store_path)
 
-# Arguments
-- `logger::IndexLogger`: The IndexLogger instance.
-- `index::AbstractChunkIndex`: The index to log.
-- `question::String`: The question associated with this index.
 
-# Returns
-- `String`: The ID of the newly added index.
-"""
+# Lazy initialization of store
+function ensure_store!(logger::IndexLogger)
+    if isnothing(logger._store)
+        logger._store = RAGStore(logger.store_path)
+    end
+    logger._store
+end
+
 function log_index(logger::IndexLogger, index::Vector{<:AbstractChunkIndex}, question::String)
     log_index(logger, first(index), question)
 end
+
 function log_index(logger::IndexLogger, index::AbstractChunkIndex, question::String)
+    store = ensure_store!(logger)
     index_dict = OrderedDict(zip(index.sources, index.chunks))
     question_tuple = (question=question, timestamp=Dates.now())
-    append!(logger.store, index_dict, question_tuple)
+    append!(store, index_dict, question_tuple)
 end
 
 """
@@ -61,7 +77,8 @@ Retrieve logged indices from the IndexLogger's RAGStore, optionally filtered by 
 """
 function get_logged_indices(logger::IndexLogger; start_date::DateTime=DateTime(0), end_date::DateTime=Dates.now(), 
                             question_filter::Union{String, Function}=x->true)
-    log = get_index_log(logger.store)
+    store = ensure_store!(logger)
+    log = get_index_log(store)
     
     filtered_log = filter(log) do entry
         date_match = start_date <= entry.timestamp <= end_date
