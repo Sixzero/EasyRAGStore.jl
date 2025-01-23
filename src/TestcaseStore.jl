@@ -5,11 +5,11 @@
 A struct to store questions/test cases associated with indices.
 
 # Fields
-- `questions::Dict{String, Vector{NamedTuple}}`: A dictionary mapping index IDs to their associated questions and other metadata as a Vector of NamedTuples.
+- `index_to_cases::Dict{String, Vector{NamedTuple}}`: A dictionary mapping index IDs to their associated test cases. Each test case is a NamedTuple containing at least (:question, :answer) and optionally :timestamp.
 - `cache_dir::String`: The directory where cache files are stored.
 """
 @kwdef struct TestcaseStore
-    questions::Dict{String, Vector{NamedTuple}} = Dict()
+    index_to_cases::Dict{String, Vector{NamedTuple}} = Dict()
     cache_dir::String = joinpath(dirname(@__DIR__), "benchmark_data")
 end
 
@@ -28,10 +28,10 @@ Append a new question/test case to the TestcaseStore.
 - `Nothing`
 """
 function Base.append!(store::TestcaseStore, index_id::String, question::NamedTuple)
-    if !haskey(store.questions, index_id)
-        store.questions[index_id] = NamedTuple[]
+    if !haskey(store.index_to_cases, index_id)
+        store.index_to_cases[index_id] = NamedTuple[]
     end
-    push!(store.questions[index_id], question)
+    push!(store.index_to_cases[index_id], question)
     
     save_testcase_store(joinpath(store.cache_dir, "testcase_store.jld2"), store)
 end
@@ -49,8 +49,8 @@ Retrieve questions and metadata associated with a specific index.
 - `Vector{NamedTuple}`: A vector of NamedTuples containing questions and other metadata associated with the index.
 """
 function get_questions(store::TestcaseStore, index_id::String)
-    if haskey(store.questions, index_id)
-        return store.questions[index_id]
+    if haskey(store.index_to_cases, index_id)
+        return store.index_to_cases[index_id]
     else
         return NamedTuple[]
     end
@@ -62,7 +62,7 @@ end
 Save a TestcaseStore object to a JLD2 file.
 """
 function save_testcase_store(filename::String, store::TestcaseStore)
-    safe_jldsave(filename; questions=store.questions)
+    safe_jldsave(filename; index_to_cases=store.index_to_cases)
 end
 
 
@@ -79,8 +79,29 @@ Load a TestcaseStore object from a JLD2 file.
 """
 function load_testcase_store(filename::String)
     data = load(filename)
+    # Support both new and legacy keys
+    cases = if haskey(data, "index_to_cases")
+        data["index_to_cases"]
+    elseif haskey(data, "questions")  # legacy key
+        data["questions"]
+    else
+        Dict{String, Vector{NamedTuple}}()
+    end
+    
     return TestcaseStore(
-        questions = data["questions"],
+        index_to_cases = cases,
         cache_dir = dirname(filename)
     )
+end
+
+"""
+    update_last_question!(store::TestcaseStore, index_id::String, updated_question::NamedTuple)
+
+Update the last question for a given index_id with new data.
+"""
+function update_last_question!(store::TestcaseStore, index_id::String, updated_question::NamedTuple)
+    if haskey(store.index_to_cases, index_id) && !isempty(store.index_to_cases[index_id])
+        store.index_to_cases[index_id][end] = updated_question
+        save_testcase_store(joinpath(store.cache_dir, "testcase_store.jld2"), store)
+    end
 end

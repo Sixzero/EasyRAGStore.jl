@@ -6,7 +6,7 @@ using PromptingTools.Experimental.RAGTools: AbstractChunkIndex
 """
     IndexLogger(store_path::String)
 
-Create an IndexLogger to persistently store and track RAG index queries and their associated questions.
+Create an IndexLogger to persistently store and track RAG chunks queries and their associated questions.
 
 The IndexLogger uses lazy initialization for the underlying RAGStore to optimize resource usage. The store is 
 only created or loaded when actually needed.
@@ -17,7 +17,7 @@ only created or loaded when actually needed.
 # Example
 ```julia
 logger = IndexLogger("my_rag_logs")
-log_index(logger, index, "What is the best way to implement RAG?")
+log_index(logger, chunks, "What is the best way to implement RAG?")
 ```
 """
 mutable struct IndexLogger
@@ -49,15 +49,11 @@ function ensure_store!(logger::IndexLogger)
     logger._store
 end
 
-function log_index(logger::IndexLogger, index::Vector{<:AbstractChunkIndex}, question::String)
-    log_index(logger, first(index), question)
-end
-
-function log_index(logger::IndexLogger, index::AbstractChunkIndex, question::String)
+# TODO adding locks and @async_showerr would be cool here IMO. 
+function log_index(logger::IndexLogger, chunks::Vector, question::String; answer=nothing)
     store = ensure_store!(logger)
-    index_dict = OrderedDict(zip(index.sources, index.chunks))
-    question_tuple = (question=question, timestamp=Dates.now())
-    append!(store, index_dict, question_tuple)
+    case = (; question, timestamp=Dates.now(), returned_answer=answer)
+    append!(store, chunks, case)
 end
 
 """
@@ -73,7 +69,7 @@ Retrieve logged indices from the IndexLogger's RAGStore, optionally filtered by 
 - `question_filter::Union{String, Function}`: A string to search for in questions or a function that takes a question string and returns a boolean. Default is to include all questions.
 
 # Returns
-- `Vector{NamedTuple}`: A vector of NamedTuples containing index_id, question, and timestamp for each logged index.
+- `Vector{NamedTuple}`: A vector of NamedTuples containing index_id, question, and timestamp for each logged chunks.
 """
 function get_logged_indices(logger::IndexLogger; start_date::DateTime=DateTime(0), end_date::DateTime=Dates.now(), 
                             question_filter::Union{String, Function}=x->true)

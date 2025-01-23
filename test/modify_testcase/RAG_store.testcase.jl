@@ -11,7 +11,7 @@ A struct to manage both DatasetStore and TestcaseStore.
 
 # Fields
 - `dataset_store::DatasetStore`: The DatasetStore object for managing indices.
-- `testcase_store::TestcaseStore`: The TestcaseStore object for managing questions/test cases.
+- `testcase_store::TestcaseStore`: The TestcaseStore object for managing test cases.
 - `cache_dir::String`: The directory where cache files are stored.
 """
 @kwdef struct RAGStore

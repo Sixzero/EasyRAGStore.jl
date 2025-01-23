@@ -15,7 +15,7 @@ A struct to manage both DatasetStore and TestcaseStore.
 - `filename::String`: The base name of the files to save/load the store.
 - `cache_dir::String`: The directory where cache files are stored.
 - `dataset_store::Union{Task, DatasetStore}`: The DatasetStore object for managing indices.
-- `testcase_store::Union{Task, TestcaseStore}`: The TestcaseStore object for managing questions/test cases.
+- `testcase_store::Union{Task, TestcaseStore}`: The TestcaseStore object for managing test cases.
 - `lock::ReentrantLock`: Lock for thread safety.
 """
 mutable struct RAGStore
@@ -40,27 +40,34 @@ function RAGStore(filename::String, cache_dir::String = joinpath(dirname(@__DIR_
 end
 
 """
-    append!(store::RAGStore, index::OrderedDict{String, String}, question::NamedTuple; metadata::Dict{String, Any} = Dict())
+    append!(store::RAGStore, chunks::OrderedDict{String, String}, question::NamedTuple; metadata::Dict{String, Any} = Dict())
 
-Append a new index and its associated question/test case to the store.
+Append a new chunks and its associated question/test case to the store.
 
 # Arguments
 - `store::RAGStore`: The RAGStore object to update.
-- `index::OrderedDict{String, String}`: New index to add, where keys are sources and values are chunks.
-- `question::NamedTuple`: The question and other metadata associated with this index.
+- `chunks::OrderedDict{String, String}`: New chunks to add, where keys are sources and values are chunks.
+- `question::NamedTuple`: The question and other metadata associated with this chunks.
 - `metadata::Dict{String, Any}`: Additional metadata to store with the question.
 
 # Returns
-- `String`: The ID of the newly added index.
+- `String`: The ID of the newly added chunks.
 """
-function Base.append!(store::RAGStore, index::OrderedDict{String, String}, question::NamedTuple)
+function Base.append!(store::RAGStore, chunks::Vector{T}, question::NamedTuple) where T
     @async_showerr lock(store.lock) do
         ensure_loaded!(store)
-        index_id = append!(store.dataset_store, index)
+        index_id = append!(store.dataset_store, chunks)
+        
+        # Add timestamp if not present
+        question = if !haskey(question, :timestamp)
+            merge(question, (timestamp=Dates.now(),))
+        else
+            question
+        end
         
         # Check if the question already exists for this index_id
         existing_questions = get_questions(store.testcase_store, index_id)
-        if !any(q -> q == question, existing_questions)
+        if !any(q -> q.question == question.question, existing_questions)
             append!(store.testcase_store, index_id, question)
             save_store(store)  # Save the store after appending
         end
@@ -72,14 +79,14 @@ end
 """
     get_index(store::RAGStore, index_id::String)
 
-Retrieve an index from the store.
+Retrieve an chunks from the store.
 
 # Arguments
 - `store::RAGStore`: The RAGStore object to query.
-- `index_id::String`: The ID of the index to retrieve.
+- `index_id::String`: The ID of the chunks to retrieve.
 
 # Returns
-- `OrderedDict{String, String}`: The retrieved index with decompressed chunks.
+- `OrderedDict{String, String}`: The retrieved chunks with decompressed chunks.
 """
 function get_index(store::RAGStore, index_id::String)
     lock(store.lock) do
@@ -91,14 +98,14 @@ end
 """
     get_questions(store::RAGStore, index_id::String) -> Vector{NamedTuple}
 
-Retrieve questions and metadata associated with a specific index.
+Retrieve questions and metadata associated with a specific chunks.
 
 # Arguments
 - `store::RAGStore`: The RAGStore object to query.
-- `index_id::String`: The ID of the index to retrieve questions for.
+- `index_id::String`: The ID of the chunks to retrieve questions for.
 
 # Returns
-- `Vector{NamedTuple}`: A vector of NamedTuples containing questions and other metadata associated with the index.
+- `Vector{NamedTuple}`: A vector of NamedTuples containing questions and other metadata associated with the chunks.
 """
 function get_questions(store::RAGStore, index_id::String)
     lock(store.lock) do

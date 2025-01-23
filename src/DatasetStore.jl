@@ -1,14 +1,15 @@
 
 # Note: The DatasetStore is designed to efficiently store multiple indices in a single file.
 # This approach allows for significant compression due to repetitions across indices.
-# The `indexes` field is a Dict of Dicts, where each inner Dict represents an index.
+# The `chunks` field is a Dict of Dicts, where each inner Dict represents an chunks.
 # This structure enables efficient storage and retrieval of multiple related indices.
 # 
 # Important: The compress and decompression process may require access to all stored indices,
 # as compressed chunks (RefChunks) can reference content in any of the stored indices.
-# This cross-index referencing is key to achieving high compression ratios.
+# This cross-chunks referencing is key to achieving high compression ratios.
 
 using OrderedCollections
+using EasyContext: AbstractChunk
 
 """
     DatasetStore
@@ -16,32 +17,32 @@ using OrderedCollections
 A struct to store collections of indices and their compression strategy.
 
 # Fields
-- `indexes::Dict{String, OrderedDict{String, Union{String, RefChunk}}}`: A dictionary of indices, where each index is an OrderedDict mapping sources to chunks.
+- `chunks::Dict{String, OrderedDict{String, Union{String, RefChunk}}}`: A dictionary of indices, where each chunks is an OrderedDict mapping sources to chunks.
 - `compression::CompressionStrategy`: The compression strategy used for storing chunks.
 - `cache_dir::String`: The directory where cache files are stored.
 """
-@kwdef struct DatasetStore{ChunkType <: AbstractChunkFormat}
-    indexes::Dict{String, OrderedDict{String, Union{String, ChunkType}}} = Dict{String, OrderedDict{String, Union{String, RefChunk}}}()
-    compression::CompressionStrategy = RefChunkCompression()
+@kwdef struct DatasetStore
+    chunks::Dict{String, AbstractVector{Union{String, AbstractChunkFormat, AbstractChunk}}} = Dict{String, AbstractVector{Union{String, AbstractChunkFormat, AbstractChunk}}}()
+    compression::CompressionStrategy = RefChunkIdxCompression()
     cache_dir::String = joinpath(dirname(@__DIR__), "benchmark_data")
 end
 
 """
-    append!(store::DatasetStore, index::OrderedDict{String, String})
+    append!(store::DatasetStore, chunks::OrderedDict{String, String})
 
-Append a new index to the DatasetStore.
+Append a new chunks to the DatasetStore.
 
 # Arguments
 - `store::DatasetStore`: The DatasetStore object to update.
-- `index::OrderedDict{String, String}`: New index to add, where keys are sources and values are chunks.
+- `chunks::OrderedDict{String, String}`: New chunks to add, where keys are sources and values are chunks.
 
 # Returns
-- `String`: The ID of the newly added index.
+- `String`: The ID of the newly added chunks.
 """
-function Base.append!(store::DatasetStore, index::OrderedDict{String, String})
-    index_id = fast_cache_key(index)
-    compressed_index = compress(store.compression, store.indexes, index)
-    store.indexes[index_id] = compressed_index
+function Base.append!(store::DatasetStore, chunks::AbstractVector{T}) where T
+    index_id = fast_cache_key(chunks)
+    compressed_index = compress(store.compression, store.chunks, chunks)
+    store.chunks[index_id] = compressed_index
     
     save_index_store(joinpath(store.cache_dir, "index_store.jld2"), store)
     
@@ -51,18 +52,18 @@ end
 """
     get_index(store::DatasetStore, index_id::String)
 
-Retrieve and decompress an index from the DatasetStore.
+Retrieve and decompress an chunks from the DatasetStore.
 
 # Arguments
 - `store::DatasetStore`: The DatasetStore object to query.
-- `index_id::String`: The ID of the index to retrieve.
+- `index_id::String`: The ID of the chunks to retrieve.
 
 # Returns
-- `OrderedDict{String, String}`: The retrieved index with decompressed chunks.
+- `OrderedDict{String, String}`: The retrieved chunks with decompressed chunks.
 """
 function get_index(store::DatasetStore, index_id::String)
-    if haskey(store.indexes, index_id)
-        return decompress(store.indexes[index_id], store)
+    if haskey(store.chunks, index_id)
+        return decompress(store.chunks[index_id], store)
     else
         throw(KeyError("Index $index_id not found in the store"))
     end
@@ -78,20 +79,20 @@ Save a DatasetStore object to a JLD2 file.
 - `store::DatasetStore`: The DatasetStore object to save.
 """
 function save_dataset_store(filename::String, store::DatasetStore)
-    safe_jldsave(filename; indexes=store.indexes, compression=store.compression)
+    safe_jldsave(filename; chunks=store.chunks, compression=store.compression)
 end
 
 """
     save_index_store(filename::String, store::DatasetStore)
 
-Save the indexes of a DatasetStore object to a JLD2 file.
+Save the chunks of a DatasetStore object to a JLD2 file.
 
 # Arguments
-- `filename::String`: The name of the file to save the indexes to.
-- `store::DatasetStore`: The DatasetStore object containing the indexes to save.
+- `filename::String`: The name of the file to save the chunks to.
+- `store::DatasetStore`: The DatasetStore object containing the chunks to save.
 """
 function save_index_store(filename::String, store::DatasetStore)
-    safe_jldsave(filename; indexes=store.indexes)
+    safe_jldsave(filename; chunks=store.chunks)
 end
 
 """
@@ -113,27 +114,28 @@ function load_dataset_store(filename::String)
         "EasyRAGBench.RefChunkCompression" => EasyRAGStore.RefChunkCompression
     ))
     return DatasetStore(
-        indexes = data["indexes"],
+        chunks = data["chunks"],
         compression = data["compression"],
         cache_dir = dirname(filename)
     )
 end
 
 """
-    decompress(index::OrderedDict{String, Union{String, AbstractChunkFormat}}, store::DatasetStore)
+    decompress(chunks::OrderedDict{String, Union{String, AbstractChunkFormat}}, store::DatasetStore)
 
-Decompress an entire index using the store's compression method and all available indexes.
+Decompress an entire chunks using the store's compression method and all available chunks.
 
 # Arguments
-- `index::OrderedDict{String, Union{String, AbstractChunkFormat}}`: The index to decompress.
-- `store::DatasetStore`: The DatasetStore containing the compression method and all indexes.
+- `chunks::OrderedDict{String, Union{String, AbstractChunkFormat}}`: The chunks to decompress.
+- `store::DatasetStore`: The DatasetStore containing the compression method and all chunks.
 
 # Returns
-- `OrderedDict{String, String}`: The decompressed index.
+- `OrderedDict{String, String}`: The decompressed chunks.
 """
-function decompress(index::OrderedDict{String, Union{String, T}}, store::DatasetStore) where T <: AbstractChunkFormat
-    decompress(store.compression, index, store.indexes)
+function decompress(chunks::OrderedDict{String, Union{String, T}}, store::DatasetStore) where T <: AbstractChunkFormat
+    decompress(store.compression, chunks, store.chunks)
 end
 
-compress(c::RefChunkCompression, store::DatasetStore, new_index::OrderedDict{String, String}) = compress(c, store.indexes, new_index)
+compress(c::RefChunkCompression, store::DatasetStore, new_index::OrderedDict{String, String}) = compress(c, store.chunks, new_index)
+compress(c::RefChunkIdxCompression, store::DatasetStore, new_index::AbstractVector{T}) where T = compress(c, store.chunks, new_index)
 
