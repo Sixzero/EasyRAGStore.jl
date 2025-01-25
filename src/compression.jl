@@ -181,7 +181,7 @@ Decompress an chunks using RefChunkCompression, resolving all RefChunks to their
 # Returns
 - `OrderedDict{String, String}`: The fully decompressed chunks.
 """
-function decompress(::RefChunkCompression, chunks::AbstractVector{T}, chunk_store::Dict{String, AbstractVector{T}}) where {T, T2}
+function decompress(::RefChunkCompression, chunks::AbstractVector{T}, chunk_store::Dict{String, AbstractVector{T2}}) where {T, T2}
     decompressed = OrderedDict{String, String}()
     for (source, chunk) in chunks
         decompressed[source] = decompress_chunk(chunk, chunk_store)
