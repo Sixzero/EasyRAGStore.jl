@@ -1,4 +1,5 @@
 using Random
+using EasyContext: get_source, AbstractChunk
 
 # Abstract type for compression strategies
 abstract type CompressionStrategy end
@@ -112,8 +113,8 @@ end
 Compress a new chunks against the existing indices using RefChunkIdxCompression.
 This function checks for existing chunks across all stored indices and creates RefChunkIdx where possible.
 """
-function compress(::RefChunkIdxCompression, chunk_store::Dict{String, AbstractVector{T}}, new_index::AbstractVector{T}) where T
-    compressed_index = Vector{Union{T, RefChunkIdx}}()
+function compress(::RefChunkIdxCompression, chunk_store::Dict{String, AbstractVector{T}}, new_index::AbstractVector{T2}) where {T, T2}
+    compressed_index = Vector{Union{T2, RefChunkIdx}}()
     
     # Generate a cache key for the new chunks and check for existence
     new_index_key = fast_cache_key(new_index)
@@ -217,11 +218,14 @@ Decompress a single chunk, handling both raw strings and RefChunks.
 function decompress_chunk(chunk::String, chunk_store::AbstractDict{String, AbstractVector{T}}) where T
     return chunk
 end
+function decompress_chunk(chunk::AbstractChunk, chunk_store::AbstractDict{String, AbstractVector{T}}) where T
+    return chunk
+end
 
 function decompress_chunk(chunk::RefChunk, chunk_store::AbstractDict{String, AbstractVector{T}}) where T
     referenced_chunks = chunk_store[chunk.collection_id]
     referenced_chunk = referenced_chunks[chunk.source]
-    return decompress_chunk(referenced_chunk, chunk_store)
+    return referenced_chunk
 end
 
 # Add decompress_chunk for RefChunkIdx
@@ -229,6 +233,6 @@ function decompress_chunk(chunk::RefChunkIdx, chunk_store::AbstractDict{String, 
     referenced_chunks = chunk_store[chunk.source]
     idx = parse(Int, chunk.idx)
     referenced_chunk = referenced_chunks[idx]
-    return decompress_chunk(referenced_chunk, chunk_store)
+    return referenced_chunk
 end
 

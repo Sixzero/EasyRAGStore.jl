@@ -32,8 +32,8 @@ function RAGStore(filename::String, cache_dir::String = joinpath(dirname(@__DIR_
     
     if isfile(dataset_file) && isfile(testcase_file)
         # Start async loading
-        dataset_task = @spawn load_dataset_store(dataset_file)
-        testcase_task = @spawn load_testcase_store(testcase_file)
+        dataset_task = @async_showerr load_dataset_store(dataset_file)
+        testcase_task = @async_showerr load_testcase_store(testcase_file)
         return RAGStore(filename, cache_dir, dataset_task, testcase_task, ReentrantLock())
     end
     return RAGStore(filename, cache_dir, DatasetStore(), TestcaseStore(), ReentrantLock())

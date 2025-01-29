@@ -49,6 +49,10 @@ function ensure_store!(logger::IndexLogger)
     logger._store
 end
 
+function log_index(logger::IndexLogger, chunks::Nothing, question::String; answer=nothing)
+    nothing # nothing to log.
+end
+
 # TODO adding locks and @async_showerr would be cool here IMO. 
 function log_index(logger::IndexLogger, chunks::Vector, question::String; answer=nothing)
     store = ensure_store!(logger)

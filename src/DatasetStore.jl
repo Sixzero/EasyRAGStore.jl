@@ -136,6 +136,11 @@ function decompress(chunks::OrderedDict{String, Union{String, T}}, store::Datase
     decompress(store.compression, chunks, store.chunks)
 end
 
+# Add Vector support for decompress
+function decompress(chunks::AbstractVector{T}, store::DatasetStore) where T
+    decompress(store.compression, chunks, store.chunks)
+end
+
 compress(c::RefChunkCompression, store::DatasetStore, new_index::OrderedDict{String, String}) = compress(c, store.chunks, new_index)
 compress(c::RefChunkIdxCompression, store::DatasetStore, new_index::AbstractVector{T}) where T = compress(c, store.chunks, new_index)
 
