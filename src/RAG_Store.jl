@@ -40,40 +40,42 @@ function RAGStore(filename::String, cache_dir::String = joinpath(dirname(@__DIR_
 end
 
 """
-    append!(store::RAGStore, chunks::OrderedDict{String, String}, question::NamedTuple; metadata::Dict{String, Any} = Dict())
+    append!(store::RAGStore, chunks::OrderedDict{String, String}, case::NamedTuple; metadata::Dict{String, Any} = Dict())
 
-Append a new chunks and its associated question/test case to the store.
+Append a new chunks and its associated case/test case to the store.
 
 # Arguments
 - `store::RAGStore`: The RAGStore object to update.
 - `chunks::OrderedDict{String, String}`: New chunks to add, where keys are sources and values are chunks.
-- `question::NamedTuple`: The question and other metadata associated with this chunks.
-- `metadata::Dict{String, Any}`: Additional metadata to store with the question.
+- `case::NamedTuple`: The case and other metadata associated with this chunks.
+- `metadata::Dict{String, Any}`: Additional metadata to store with the case.
 
 # Returns
 - `String`: The ID of the newly added chunks.
 """
-function Base.append!(store::RAGStore, chunks::Vector{T}, question::NamedTuple) where T
-    @async_showerr lock(store.lock) do
-        ensure_loaded!(store)
-        index_id = append!(store.dataset_store, chunks)
-        
-        # Add timestamp if not present
-        question = if !haskey(question, :timestamp)
-            merge(question, (timestamp=Dates.now(),))
-        else
-            question
-        end
-        
-        # Check if the question already exists for this index_id
-        existing_questions = get_questions(store.testcase_store, index_id)
-        if !any(q -> q.question == question.question, existing_questions)
-            append!(store.testcase_store, index_id, question)
-            save_store(store)  # Save the store after appending
-        end
-        
-        index_id
+function Base.append!(store::RAGStore, chunks::Vector{T}, case::NamedTuple) where T
+    ensure_loaded!(store)
+    index_id = append!(store.dataset_store, chunks)
+    
+    # Add timestamp if not present
+    case = if !haskey(case, :timestamp)
+        merge(case, (timestamp=Dates.now(),))
+    else
+        case
     end
+    
+    # Check if the case already exists for this index_id
+    existing_questions = get_questions(store.testcase_store, index_id)
+    if !any(q -> q.question == case.question, existing_questions)
+        append!(store.testcase_store, index_id, case)
+        lock(store.lock) do
+            save_store_sync(store)  # Save the store after appending
+        end
+    else
+        @info "Question already exists for index_id: $index_id Question: $(case.question)"
+    end
+    
+    index_id
 end
 
 """
@@ -89,10 +91,8 @@ Retrieve an chunks from the store.
 - `OrderedDict{String, String}`: The retrieved chunks with decompressed chunks.
 """
 function get_index(store::RAGStore, index_id::String)
-    lock(store.lock) do
-        ensure_loaded!(store)
-        get_index(store.dataset_store, index_id)
-    end
+    ensure_loaded!(store)
+    get_index(store.dataset_store, index_id)
 end
 
 """
@@ -108,28 +108,23 @@ Retrieve questions and metadata associated with a specific chunks.
 - `Vector{NamedTuple}`: A vector of NamedTuples containing questions and other metadata associated with the chunks.
 """
 function get_questions(store::RAGStore, index_id::String)
-    lock(store.lock) do
-        ensure_loaded!(store)
-        get_questions(store.testcase_store, index_id)
-    end
+    ensure_loaded!(store)
+    get_questions(store.testcase_store, index_id)
 end
 
 """
-    save_store(store::RAGStore)
+    save_store_sync(store::RAGStore)
 
 Save a Store object to JLD2 files.
 
 # Arguments
 - `store::RAGStore`: The RAGStore object to save.
 """
-function save_store(store::RAGStore)
-    lock(store.lock) do
-        ensure_loaded!(store)
-        dataset_filename = joinpath(store.cache_dir, "$(store.filename)_dataset.jld2")
-        testcase_filename = joinpath(store.cache_dir, "$(store.filename)_testcase.jld2")
-        save_dataset_store(dataset_filename, store.dataset_store)
-        save_testcase_store(testcase_filename, store.testcase_store)
-    end
+function save_store_sync(store::RAGStore)
+    dataset_filename = joinpath(store.cache_dir, "$(store.filename)_dataset.jld2")
+    testcase_filename = joinpath(store.cache_dir, "$(store.filename)_testcase.jld2")
+    save_dataset_store(dataset_filename, store.dataset_store)
+    save_testcase_store(testcase_filename, store.testcase_store)
 end
 
 # Helper function to ensure cache directory exists
@@ -145,7 +140,6 @@ function initialize_store(store::RAGStore)
 end
 
 # Helper to ensure we have loaded store
-function ensure_loaded!(store::Task) fetch(store) end
 function ensure_loaded!(store::RAGStore)
     lock(store.lock) do
         if store.dataset_store isa Task
@@ -156,6 +150,15 @@ function ensure_loaded!(store::RAGStore)
         end
     end
 end
-function ensure_loaded!(store) store end
+"""
+    ensure_saved(store::RAGStore)
+
+Ensure all pending writes to both dataset and testcase stores are completed.
+"""
+function ensure_saved(store::RAGStore)
+    lock(store.lock) do
+        # we just wait for the lock to be released
+    end
+end
 
 export RAGStore

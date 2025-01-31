@@ -45,6 +45,7 @@ Base.convert(::Type{IndexLogger}, x::IndexLogger_JLD2) = IndexLogger(x.store_pat
 function ensure_store!(logger::IndexLogger)
     if isnothing(logger._store)
         logger._store = RAGStore(logger.store_path)
+        ensure_loaded!(logger._store)
     end
     logger._store
 end
@@ -58,6 +59,32 @@ function log_index(logger::IndexLogger, chunks::Vector, question::String; answer
     store = ensure_store!(logger)
     case = (; question, timestamp=Dates.now(), returned_answer=answer)
     append!(store, chunks, case)
+end
+
+"""
+    get_index_log(store::RAGStore) -> Vector{NamedTuple}
+
+Get all logged indices from a RAGStore as a flat vector of NamedTuples.
+"""
+function get_index_log(store::RAGStore)
+    ensure_loaded!(store)
+    log_entries = NamedTuple[]
+    
+    # Iterate through all indices and their questions
+    for (index_id, questions) in store.testcase_store.index_to_cases
+        for question in questions
+            # Merge the index_id into each question entry
+            entry = merge(question, (index_id=index_id,))
+            push!(log_entries, entry)
+        end
+    end
+    
+    # Sort by timestamp if available
+    if !isempty(log_entries) && haskey(first(log_entries), :timestamp)
+        sort!(log_entries, by=x->x.timestamp)
+    end
+    
+    return log_entries
 end
 
 """
@@ -91,4 +118,14 @@ function get_logged_indices(logger::IndexLogger; start_date::DateTime=DateTime(0
     end
     
     return filtered_log
+end
+
+"""
+    ensure_saved(logger::IndexLogger)
+
+Ensure all pending writes to the store are completed.
+"""
+function ensure_saved(logger::IndexLogger)
+    isnothing(logger._store) && return
+    ensure_saved(logger._store)
 end

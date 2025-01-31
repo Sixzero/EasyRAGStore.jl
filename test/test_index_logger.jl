@@ -1,6 +1,7 @@
 using Test
-using EasyRAGStore: IndexLogger, log_index, get_logged_indices
+using EasyRAGStore: IndexLogger, log_index, get_logged_indices, ensure_saved
 using Dates
+using EasyContext: FileChunk, SourceChunk, SourcePath  # Add SourceChunk to imports
 
 @testset "IndexLogger with Vector{String} Tests" begin
     @testset "Basic logging operations" begin
@@ -60,7 +61,6 @@ using Dates
         
         try
             logger = IndexLogger(joinpath(test_dir, "concurrent_log"))
-            
             # Create multiple tasks to log concurrently
             tasks = [@async begin
                 chunks = ["Concurrent chunk $i-1", "Concurrent chunk $i-2"]
@@ -79,4 +79,145 @@ using Dates
             rm(test_dir, recursive=true)
         end
     end
+    @testset "IndexLogger Storage Tests" begin
+        test_dir = joinpath(tempdir(), "index_logger_storage_test_$(rand(1000:9999))")
+        mkpath(test_dir)
+        
+        try
+            # Create logger and log some data
+            logger = IndexLogger(joinpath(test_dir, "storage_test"))
+            
+            # Test data
+            chunks = ["Test chunk 1", "Test chunk 2"]
+            question = "What are these chunks about?"
+            answer = "These are test chunks"
+            
+            # Log with answer
+            log_index(logger, chunks, question, answer=answer)
+            
+            # Force save by creating new logger instance
+            logger = nothing
+            GC.gc()
+            
+            # Try to load the data directly using JLD2
+            store_path = joinpath(test_dir, "storage_test_testcase.jld2")
+            @show store_path
+            @test isfile(store_path)
+            
+            # Load and verify data
+            data = JLD2.load(store_path)  # Simplified loading
+            
+            @test haskey(data, "index_to_cases")
+            cases = data["index_to_cases"]
+            @test !isempty(cases)
+            
+            # Create new logger and verify retrieval
+            new_logger = IndexLogger(joinpath(test_dir, "storage_test"))
+            logs = get_logged_indices(new_logger)
+            
+            @test length(logs) == 1
+            log_entry = first(logs)
+            @test log_entry.question == question
+            @test log_entry.returned_answer == answer
+            
+        finally
+            rm(test_dir, recursive=true)
+        end
+    end
+
+    @testset "IndexLogger with FileChunk Tests" begin
+        test_dir = joinpath(tempdir(), "index_logger_filechunk_test_$(rand(1000:9999))")
+        mkpath(test_dir)
+        
+        try
+            # Create logger
+            logger = IndexLogger(joinpath(test_dir, "test_log"))
+            
+            # Test FileChunk data
+            chunks = [
+                FileChunk(source=SourcePath(path="file1.txt"), content="Test content 1"),
+                FileChunk(source=SourcePath(path="file2.txt"), content="Test content 2")
+            ]
+            question = "What are these chunks about?"
+            answer = "These are test chunks"
+            
+            # Log with answer
+            log_index(logger, chunks, question, answer=answer)
+            
+            # Force save by creating new logger instance
+            logger = nothing
+            GC.gc()
+            
+            # Try to load the data directly using JLD2
+            store_path = joinpath(test_dir, "test_log_testcase.jld2")
+            @test isfile(store_path)
+            
+            # Create new logger and verify retrieval
+            new_logger = IndexLogger(joinpath(test_dir, "test_log"))
+            logs = get_logged_indices(new_logger)
+            
+            @test length(logs) == 1
+            log_entry = first(logs)
+            @test log_entry.question == question
+            @test log_entry.returned_answer == answer
+            
+        finally
+            rm(test_dir, recursive=true)
+        end
+    end
+
+    @testset "IndexLogger with Mixed Chunk Types Tests" begin
+        test_dir = joinpath(tempdir(), "index_logger_mixed_test_$(rand(1000:9999))")
+        mkpath(test_dir)
+        
+        try
+            # Create logger
+            logger = IndexLogger(joinpath(test_dir, "test_log"))
+            
+            # Test mixed chunk types
+            chunks = [
+                FileChunk(source=SourcePath(path="file1.txt"), content="File content 1"),
+                FileChunk(source=SourcePath(path="file3.txt", from_line=1, to_line=10), content="File content with lines")
+            ]
+            chunks2 = [
+                SourceChunk(source=SourcePath(path="file2.txt"), content="Source content 2", containing_module="TestModule"),
+            ]
+            chunks3 = [
+                "Just some string chunks", "And some more string chunks"
+            ]
+            question = "What are these mixed chunks about?"
+            answer = "These are mixed type chunks"
+            
+            # Log with answer
+            log_index(logger, chunks, question, answer=answer)
+            log_index(logger, chunks2, question *"2", answer=answer)
+            log_index(logger, chunks3, question *"3", answer=answer)
+            
+            # Ensure all writes are completed
+            ensure_saved(logger)
+            
+            # Try to load the data directly using JLD2
+            store_path = joinpath(test_dir, "test_log_testcase.jld2")
+            @test isfile(store_path)
+            
+            # Create new logger and verify retrieval
+            new_logger = IndexLogger(joinpath(test_dir, "test_log"))
+            logs = get_logged_indices(new_logger)
+            
+            @test length(logs) == 3
+            log_entry = first(logs)
+            @test log_entry.question == question
+            @test log_entry.returned_answer == answer
+
+            logger2 = IndexLogger(joinpath(test_dir, "test_log"))
+            logs2 = get_logged_indices(logger2)
+            @test length(logs2) == 3
+            log_entry2 = first(logs2)
+            @test log_entry2.question == question
+            @test log_entry2.returned_answer == answer
+        finally
+            rm(test_dir, recursive=true)
+        end
+    end
+
 end

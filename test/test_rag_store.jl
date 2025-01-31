@@ -1,5 +1,5 @@
 using Test
-using EasyRAGStore: RAGStore, get_index, get_questions, append!, save_store
+using EasyRAGStore: RAGStore, get_index, get_questions, append!, save_store_sync
 using EasyRAGStore
 using OrderedCollections
 using Dates
@@ -51,7 +51,7 @@ using Dates
         @test get_index(store, index_id3) == index1
         
         # Test saving and loading the store
-        save_store(joinpath(test_cache_dir, "rag_store"), store)
+        save_store_sync(joinpath(test_cache_dir, "rag_store"), store)
         loaded_store = RAGStore(joinpath(test_cache_dir, "rag_store"))
         
         # Verify loaded store
@@ -97,7 +97,7 @@ using Dates
         @test all_questions[3] == question3
         
         # Test saving and loading the store
-        save_store(joinpath(test_cache_dir, "rag_store"), store)
+        save_store_sync(joinpath(test_cache_dir, "rag_store"), store)
         loaded_store = RAGStore(joinpath(test_cache_dir, "rag_store"))
         
         # Verify loaded store

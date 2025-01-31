@@ -78,7 +78,8 @@ Load a TestcaseStore object from a JLD2 file.
 - `TestcaseStore`: The loaded TestcaseStore object.
 """
 function load_testcase_store(filename::String)
-    data = load(filename)
+    data = JLD2.load(filename)
+    
     # Support both new and legacy keys
     cases = if haskey(data, "index_to_cases")
         data["index_to_cases"]
