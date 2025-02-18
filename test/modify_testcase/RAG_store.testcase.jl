@@ -73,7 +73,7 @@ function get_questions(store::RAGStore, index_id::String)
 end
 
 """
-    save_store(filename::String, store::Store)
+    save_store_sync(filename::String, store::Store)
 
 Save a Store object to JLD2 files.
 
@@ -81,7 +81,7 @@ Save a Store object to JLD2 files.
 - `filename::String`: The base name of the files to save the store to.
 - `store::Store`: The Store object to save.
 """
-function save_store(filename::String, store::RAGStore)
+function save_store_sync(filename::String, store::RAGStore)
     dataset_filename = filename * "_dataset.jld2"
     testcase_filename = filename * "_testcase.jld2"
     save_dataset_store(dataset_filename, store.dataset_store)
