@@ -26,7 +26,7 @@ JLD2 = "≥0.5"
 Markdown = "≥1.11.0"
 OrderedCollections = "≥1.6.3"
 PromptingTools = "≥0.69"
-REPL = "≥1.11.0"
+REPL = "≥1.9.0"
 Random = "≥1.11.0"
 ReplMaker = "≥0.2.7"
 
