@@ -1,7 +1,8 @@
 using EasyRAGStore: RAGStore, append!
 using OrderedCollections: OrderedDict
 using Dates
-using PromptingTools.Experimental.RAGTools: AbstractChunkIndex
+using RAGTools: AbstractChunkIndex
+
 
 """
     IndexLogger(store_path::String)
