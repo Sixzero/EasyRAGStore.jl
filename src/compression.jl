@@ -1,5 +1,5 @@
 using Random
-using EasyContext: get_source, AbstractChunk
+using EasyContext: get_source, AbstractChunk, fast_cache_key
 
 # Abstract type for compression strategies
 abstract type CompressionStrategy end
@@ -28,36 +28,6 @@ function generate_large_content(size_kb::Int; seed=42)
     return content
 end
 
-# Utility functions for generating cache keys
-function fast_cache_key(chunks::OrderedDict{String, String})
-    fast_cache_key(keys(chunks))
-end
-function fast_cache_key(chunks::Vector{T}) where T
-    # Pass get_source as a function and chunks as the iterator
-    fast_cache_key(get_source, chunks)
-end
-
-function fast_cache_key(keys::AbstractSet)
-    if isempty(keys)
-        return string(zero(UInt64))  # Return a zero hash for empty input
-    end
-    
-    # Combine hashes of all keys
-    combined_hash = reduce(xor, Base.Generator(hash, items))
-    
-    return string(combined_hash, base=16, pad=16)  # Convert to 16-digit hexadecimal string
-end
-
-function fast_cache_key(fn::Function, keys)
-    if isempty(keys)
-        return string(zero(UInt64))  # Return a zero hash for empty input
-    end
-
-    # Combine hashes of all keys
-    combined_hash = reduce(xor, hash(fn(key)) for key in keys)
-
-    return string(combined_hash, base=16, pad=16)
-end
 
 """
     compress(::RefChunkCompression, chunk_store::Dict, new_index::OrderedDict{String, String}) -> OrderedDict{String, Union{String, RefChunk}}
